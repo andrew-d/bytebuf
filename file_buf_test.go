@@ -5,6 +5,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -20,6 +21,18 @@ func TestFileBuf(t *testing.T) {
 	buf, err := NewFromFile(f)
 	if assert.NoError(t, err) {
 		testByteBufImpl(t, buf, expected)
+	}
+}
+
+func TestFileBufLarge(t *testing.T) {
+	largeBuf := strings.Repeat("i'm a data line\n", (4*1024*1024)/16+1)
+
+	f := makeTempFile(t, largeBuf)
+	defer f.Close()
+
+	buf, err := NewFromFile(f)
+	if assert.NoError(t, err) {
+		assertCopyViaConn(t, buf, largeBuf)
 	}
 }
 

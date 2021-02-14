@@ -50,14 +50,21 @@ func maybeSendfile(dst *net.TCPConn, src *os.File, l int64) (n int64, handled bo
 }
 
 func sendfileFd(dst syscall.RawConn, src uintptr, remain int64) (int64, error) {
+	// sendfile(2) will only send at most 0x7ffff000 bytes in one chunk,
+	// but we limit things to a smaller size to prevent large transfers
+	// from blocking too long.
+	const maxSendfileSize int = 4 * 1024 * 1024
+
 	var (
 		offset  int64
 		written int64
 		err     error
 	)
 	for remain > 0 {
-		// TODO: chunk to maximum size?
-		n := int(remain)
+		n := maxSendfileSize
+		if n > int(remain) {
+			n = int(remain)
+		}
 
 		var werr error
 		err = dst.Write(func(fd uintptr) bool {
