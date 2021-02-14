@@ -7,14 +7,25 @@ package bytebuf
 import (
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"syscall"
 	"unsafe"
 )
 
 func maybeWritev(w io.Writer, slices [][]byte) (int64, bool, error) {
-	f, ok := w.(*os.File)
-	if !ok {
+	var (
+		conn syscall.RawConn
+		err  error
+	)
+	switch v := w.(type) {
+	case *os.File:
+		conn, err = v.SyscallConn()
+
+	case *net.TCPConn:
+		conn, err = v.SyscallConn()
+
+	default:
 		return 0, false, nil
 	}
 
@@ -35,15 +46,28 @@ func maybeWritev(w io.Writer, slices [][]byte) (int64, bool, error) {
 		return 0, true, nil
 	}
 
-	nwRaw, _, errno := syscall.Syscall(
-		syscall.SYS_WRITEV,
-		f.Fd(),
-		uintptr(unsafe.Pointer(&iovec[0])),
-		uintptr(len(iovec)),
+	var (
+		n     uintptr
+		errno syscall.Errno
 	)
-	if errno != 0 {
-		return int64(nwRaw), true, fmt.Errorf("writev failed with error: %d", errno)
+	err = conn.Write(func(fd uintptr) bool {
+		n, _, errno = syscall.Syscall(
+			syscall.SYS_WRITEV,
+			fd,
+			uintptr(unsafe.Pointer(&iovec[0])),
+			uintptr(len(iovec)),
+		)
+
+		// Retry if we're interrupted or would block; the conn.Write
+		// function will wait for writes to be available.
+		if errno == syscall.EINTR || errno == syscall.EAGAIN {
+			return false
+		}
+		return true
+	})
+	if err == nil && errno != 0 {
+		err = fmt.Errorf("writev failed with error: %d", errno)
 	}
 
-	return int64(nwRaw), true, nil
+	return int64(n), true, err
 }

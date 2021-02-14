@@ -2,6 +2,7 @@ package bytebuf
 
 import (
 	"io"
+	"net"
 	"os"
 )
 
@@ -36,7 +37,20 @@ func (b *fileBuf) AsReader() io.Reader {
 
 // WriteTo implements io.WriterTo
 func (b *fileBuf) WriteTo(w io.Writer) (n int64, err error) {
-	// TODO: we can probably optimize this?
+	var handled bool
+	switch v := w.(type) {
+	case *os.File:
+		// TODO: use copy_file_range(2)
+
+	case *net.TCPConn:
+		// Try to use sendfile(2) to copy data directly from the file
+		// to the connection.
+		n, handled, err = maybeSendfile(v, b.f, b.size)
+	}
+	if handled {
+		return
+	}
+
 	n, err = io.Copy(w, b.AsReader())
 	return
 }

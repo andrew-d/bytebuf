@@ -3,11 +3,18 @@ package bytebuf
 import (
 	"io"
 	"io/ioutil"
+	"os"
 )
 
 // NewFromReader creates a ByteBuf from an io.Reader. It will buffer data to
 // disk in the provided directory.
 func NewFromReader(r io.Reader, dir string) (ByteBuf, error) {
+	// See if this is a type that we can special-case.
+	switch v := r.(type) {
+	case *os.File:
+		return NewFromFile(v)
+	}
+
 	f, err := ioutil.TempFile(dir, "")
 	if err != nil {
 		return nil, err

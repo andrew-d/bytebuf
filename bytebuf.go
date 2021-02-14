@@ -8,8 +8,12 @@ import (
 // that can be read in a variety of ways.
 type ByteBuf interface {
 	io.ReaderAt
-	io.WriterTo
 	io.Closer
+
+	// The io.WriterTo implementation for all ByteBufs is guaranteed to be
+	// concurrency-safe - i.e. it does not modify an internal offset and
+	// can be used multiple times without changing the written data.
+	io.WriterTo
 
 	// Length returns the length of this ByteBuf.
 	Length() int64
