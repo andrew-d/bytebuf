@@ -18,9 +18,21 @@ func maybeWritev(w io.Writer, slices [][]byte) (int64, bool, error) {
 		return 0, false, nil
 	}
 
-	iovec := make([]syscall.Iovec, len(slices))
-	for i, slice := range slices {
-		iovec[i] = syscall.Iovec{&slice[0], uint64(len(slice))}
+	iovec := make([]syscall.Iovec, 0, len(slices))
+	for _, slice := range slices {
+		if len(slice) == 0 {
+			continue
+		}
+
+		iovec = append(iovec, syscall.Iovec{
+			Base: &slice[0],
+			Len:  uint64(len(slice)),
+		})
+	}
+
+	// Don't make a syscall for a zero-length write
+	if len(iovec) == 0 {
+		return 0, true, nil
 	}
 
 	nwRaw, _, errno := syscall.Syscall(
