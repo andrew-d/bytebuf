@@ -30,14 +30,13 @@ func NewFromReader(r io.Reader, dir string) (ByteBuf, error) {
 }
 
 // ReadAll reads an entire ByteBuf into a byte slice and returns it. This may
-// be faster than calling ioutil.ReadAll(buf.AsReader()).
+// be more efficient than calling ioutil.ReadAll(buf.AsReader()).
 func ReadAll(b ByteBuf) ([]byte, error) {
 	switch v := b.(type) {
 	case *sliceBuf:
-		ret := make([]byte, int(b.Length()))
+		ret := make([]byte, 0, int(b.Length()))
 		for _, slice := range v.slices {
-			n := copy(ret, slice)
-			ret = ret[n:]
+			ret = append(ret, slice...)
 		}
 		return ret, nil
 
