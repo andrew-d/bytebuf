@@ -22,10 +22,21 @@ func NewFromSlice(b []byte) ByteBuf {
 	return ret
 }
 
+// NewFromString creates a ByteBuf from an underlying string. This is a
+// convenience method around NewFromSlice.
+func NewFromString(s string) ByteBuf {
+	return NewFromSlice([]byte(s))
+}
+
 // NewFromSlices creates a ByteBuf from multiple slices.
 func NewFromSlices(bs ...[]byte) ByteBuf {
 	ret := &sliceBuf{slices: bs}
 	return ret
+}
+
+// Empty creates an empty ByteBuf.
+func Empty() ByteBuf {
+	return &sliceBuf{}
 }
 
 // Length implements ByteBuf

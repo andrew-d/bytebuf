@@ -29,8 +29,6 @@ func maybeCopyFileRange(dst, src syscall.Conn, remain int64) (int64, bool, error
 		return 0, false, nil
 	}
 
-	println("maybeCopyFileRange: remain:", remain)
-
 	var (
 		written   int64
 		srcOffset int64
@@ -41,8 +39,6 @@ func maybeCopyFileRange(dst, src syscall.Conn, remain int64) (int64, bool, error
 		if n > int(remain) {
 			n = int(remain)
 		}
-
-		println("  cfr: written:", written, "srcOffset:", srcOffset, "n:", n)
 
 		var (
 			err1, err2, werr error
