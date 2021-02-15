@@ -40,7 +40,9 @@ func (b *fileBuf) WriteTo(w io.Writer) (n int64, err error) {
 	var handled bool
 	switch v := w.(type) {
 	case *os.File:
-		// TODO: use copy_file_range(2)
+		// Try to use copy_file_range(2) to copy directly from the file
+		// to the output file.
+		n, handled, err = maybeCopyFileRange(v, b.f, b.size)
 
 	case *net.TCPConn:
 		// Try to use sendfile(2) to copy data directly from the file
