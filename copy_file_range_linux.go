@@ -13,7 +13,7 @@ import (
 var copyFileRangeSupported uint32 = 1
 
 // copy_file_range will return spurious errors if you pass a chunk size that's
-// too large - let's artifically limit this to 100 MiB for now.
+// too large - let's artificially limit this to 100 MiB for now.
 //
 // This is a variable so we can override it in testing.
 var maxCopyFileRangeSize int = 100 * 1024 * 1024
@@ -55,7 +55,7 @@ func maybeCopyFileRange(dst, src syscall.Conn, remain int64) (int64, bool, error
 					int(srcfd),
 					nil, // use destination file offset
 					&srcOffset,
-					int(n),
+					n,
 				)
 
 				// Always succeed here, since we'll retry the
@@ -67,8 +67,8 @@ func maybeCopyFileRange(dst, src syscall.Conn, remain int64) (int64, bool, error
 
 			// Update lengths unconditionally
 			if currWritten > 0 {
-				written += int64(currWritten)
-				remain -= int64(currWritten)
+				written += currWritten
+				remain -= currWritten
 			}
 
 			// If we get an error from Write, we're done
