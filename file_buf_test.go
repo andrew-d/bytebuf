@@ -25,10 +25,19 @@ func TestFileBuf(t *testing.T) {
 }
 
 func TestFileBufLarge(t *testing.T) {
-	largeBuf := strings.Repeat("i'm a data line\n", (4*1024*1024)/16+1)
+	oldSize := maxSendfileSize
+	maxSendfileSize = 4 * 1024 * 1024
+	t.Cleanup(func() {
+		maxSendfileSize = oldSize
+	})
+
+	const ss = "i'm a data line\n"
+	nRepeats := (maxSendfileSize / len(ss)) + 1
+	largeBuf := strings.Repeat(ss, nRepeats)
 
 	f := makeTempFile(t, largeBuf)
 	defer f.Close()
+	require.NoError(t, f.Sync())
 
 	buf, err := NewFromFile(f)
 	if assert.NoError(t, err) {
@@ -79,7 +88,7 @@ func TestFileBufShortWrite(t *testing.T) {
 	})
 
 	t.Run("WriteToConn", func(t *testing.T) {
-		l, err := net.Listen("tcp", ":0")
+		l, err := net.Listen("tcp", "localhost:0")
 		require.NoError(t, err)
 		defer l.Close()
 
@@ -124,6 +133,6 @@ func TestFileBufShortWrite(t *testing.T) {
 		conn.Close()
 		t.Logf("Waiting for read to finish")
 		<-readDone
-		assert.Equal(t, expected[:int(newLen)], string(connBuf.Bytes()))
+		assert.Equal(t, expected[:int(newLen)], connBuf.String())
 	})
 }

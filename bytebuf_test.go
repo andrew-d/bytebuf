@@ -39,6 +39,7 @@ func testByteBufImpl(t *testing.T, impl ByteBuf, expected string) {
 
 		// Test every possible length and offset
 		for offset := 0; offset < len(expected); offset++ {
+			offset := offset
 			t.Run(fmt.Sprintf("Offset=%d", offset), func(t *testing.T) {
 				for length := 1; length < len(expected)-offset; length++ {
 					assertReadAt(t, offset, length, expected[offset:offset+length])
@@ -58,7 +59,7 @@ func testByteBufImpl(t *testing.T, impl ByteBuf, expected string) {
 			require.NoError(t, err)
 			require.Equal(t, impl.Length(), n)
 
-			assert.Equal(t, expected, string(buf.Bytes()))
+			assert.Equal(t, expected, buf.String())
 		})
 
 		t.Run("WriteToFile", func(t *testing.T) {
@@ -88,8 +89,8 @@ func testByteBufImpl(t *testing.T, impl ByteBuf, expected string) {
 
 // assertCopyViaConn will copy the given buffer to a net.Conn and assert that
 // the data matches the expected value.
-func assertCopyViaConn(t *testing.T, buf ByteBuf, expected string) {
-	l, err := net.Listen("tcp", ":0")
+func assertCopyViaConn(t *testing.T, buf io.WriterTo, expected string) {
+	l, err := net.Listen("tcp", "localhost:0")
 	require.NoError(t, err)
 	defer l.Close()
 
@@ -131,7 +132,7 @@ func assertCopyViaConn(t *testing.T, buf ByteBuf, expected string) {
 	conn.Close()
 	t.Logf("Waiting for read to finish")
 	<-readDone
-	assert.Equal(t, expected, string(connBuf.Bytes()))
+	assert.Equal(t, expected, connBuf.String())
 }
 
 // makeTempFile creates a temporary file with the provided data in the tests's

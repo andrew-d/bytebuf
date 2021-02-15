@@ -28,6 +28,9 @@ func maybeWritev(w io.Writer, slices [][]byte) (int64, bool, error) {
 	default:
 		return 0, false, nil
 	}
+	if err != nil {
+		return 0, false, err
+	}
 
 	iovec := make([]syscall.Iovec, 0, len(slices))
 	for _, slice := range slices {

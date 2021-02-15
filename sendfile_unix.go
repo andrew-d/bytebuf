@@ -4,20 +4,16 @@ package bytebuf
 
 import (
 	"io"
-	"net"
-	"os"
 	"syscall"
 )
 
-func maybeSendfile(dst *net.TCPConn, src *os.File, l int64) (n int64, handled bool, err error) {
-	var fConn, netConn syscall.RawConn
-
-	fConn, err = src.SyscallConn()
+func maybeSendfile(dst, src syscall.Conn, l int64) (int64, bool, error) {
+	fConn, err := src.SyscallConn()
 	if err != nil {
 		return 0, false, nil
 	}
 
-	netConn, err = dst.SyscallConn()
+	netConn, err := dst.SyscallConn()
 	if err != nil {
 		return 0, false, nil
 	}
@@ -25,7 +21,10 @@ func maybeSendfile(dst *net.TCPConn, src *os.File, l int64) (n int64, handled bo
 	// Use the RawConns to get a FD for reading and writing. Similar to the
 	// Go runtime (in src/net/sendfile_linux.go), we don't retry reads from
 	// the source file.
-	var werr error
+	var (
+		n    int64
+		werr error
+	)
 	err = fConn.Read(func(fd uintptr) bool {
 		n, werr = sendfileFd(netConn, fd, l)
 		return true
@@ -38,23 +37,22 @@ func maybeSendfile(dst *net.TCPConn, src *os.File, l int64) (n int64, handled bo
 		return 0, false, nil
 	}
 
-	// Otherwise, we did something
-	handled = true
-
 	// Return either error, if we got one.
 	if err == nil {
 		err = werr
 	}
 
-	return
+	return n, true, err
 }
 
-func sendfileFd(dst syscall.RawConn, src uintptr, remain int64) (int64, error) {
-	// sendfile(2) will only send at most 0x7ffff000 bytes in one chunk,
-	// but we limit things to a smaller size to prevent large transfers
-	// from blocking too long.
-	const maxSendfileSize int = 4 * 1024 * 1024
+// sendfile(2) will only send at most 0x7ffff000 bytes in one chunk,
+// but we limit things to a smaller size to prevent large transfers
+// from blocking too long.
+//
+// This is a variable so we can override it in testing.
+var maxSendfileSize int = 4 * 1024 * 1024
 
+func sendfileFd(dst syscall.RawConn, src uintptr, remain int64) (int64, error) {
 	var (
 		offset  int64
 		written int64
@@ -66,9 +64,12 @@ func sendfileFd(dst syscall.RawConn, src uintptr, remain int64) (int64, error) {
 			n = int(remain)
 		}
 
-		var werr error
+		var (
+			werr        error
+			currWritten int
+		)
 		err = dst.Write(func(fd uintptr) bool {
-			n, werr = syscall.Sendfile(
+			currWritten, werr = syscall.Sendfile(
 				int(fd),
 				int(src),
 				&offset,
@@ -76,14 +77,14 @@ func sendfileFd(dst syscall.RawConn, src uintptr, remain int64) (int64, error) {
 			)
 
 			// Update lengths unconditionally
-			if n > 0 {
-				written += int64(n)
-				remain -= int64(n)
+			if currWritten > 0 {
+				written += int64(currWritten)
+				remain -= int64(currWritten)
 			}
 
 			// 0-sized write but no error indicates an EOF; stop
 			// here.
-			if n == 0 && werr == nil {
+			if currWritten == 0 && werr == nil {
 				return true
 			}
 
@@ -110,7 +111,7 @@ func sendfileFd(dst syscall.RawConn, src uintptr, remain int64) (int64, error) {
 		// yet hit 0 remaining bytes, then we reached EOF and we should
 		// return. We return 'io.EOF' to indicate that we wrote less
 		// than what we're expecting.
-		if n == 0 && remain > 0 {
+		if currWritten == 0 && remain > 0 {
 			return written, io.EOF
 		}
 	}

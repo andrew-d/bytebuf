@@ -3,10 +3,9 @@
 package bytebuf
 
 import (
-	"net"
-	"os"
+	"syscall"
 )
 
-func maybeSendfile(dst *net.TCPConn, src *os.File, l int64) (n int64, handled bool, err error) {
+func maybeSendfile(dst, src syscall.Conn, l int64) (n int64, handled bool, err error) {
 	return 0, false, nil
 }

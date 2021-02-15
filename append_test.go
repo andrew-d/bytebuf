@@ -13,6 +13,7 @@ func TestCombinedBuf(t *testing.T) {
 
 	// Test every possible splitpoint for a string
 	for offset := 0; offset < len(expected); offset++ {
+		offset := offset
 		t.Run(fmt.Sprintf("Split=%d", offset), func(t *testing.T) {
 			buf1 := NewFromSlice([]byte(expected[:offset]))
 			buf2 := NewFromSlice([]byte(expected[offset:]))

@@ -1,0 +1,46 @@
+linters-settings:
+  gci:
+    local-prefixes: github.com/andrew-d/opinionated-server
+  misspell:
+    locale: US
+  nolintlint:
+    allow-unused: false
+    allow-leading-space: false
+
+linters:
+  disable-all: true
+  enable:
+    # Enabled by default
+    - deadcode
+    - errcheck
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - structcheck
+    - typecheck
+    - unused
+    - varcheck
+
+    # Enabled by us
+    - bodyclose
+    - exhaustive
+    - exportloopref
+    - gci
+    - goconst
+    - gofmt
+    - goimports
+    - goprintffuncname
+    - gosec
+    - interfacer
+    - lll
+    - misspell
+    - nakedret
+    - noctx
+    - nolintlint
+    - predeclared
+    - rowserrcheck
+    - scopelint
+    - unconvert
+    - unparam
+    - whitespace
